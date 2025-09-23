@@ -1,19 +1,17 @@
-Documentation 
-
-Task 
+# Constructive solid geometry editor
 
 My chosen topic was to create a rudamentary 3D modelling software that uses CSG(constructive solid geometry) to create 3D objects.
-CSG is a technique of generating objects by combining prmitive objects/primitives (such as sphere,cuboid, cylinder) using binary operations:  union, intersection, difference.
-These 3D models will then be rendered using raycasting.
+CSG is a technique of generating objects by combining primitive objects/primitives (such as sphere,box, cylinder) using binary operations:  union, intersection, difference. These 3D models are then rendered using raymarching. 
 
+## Features
 
-Programming part
+- create, manipulate, combine primitives (Currently: box, sphere, cylinder) to create a scene
+- GUI 
+- render the scene using raymarching
+- save the rendered scene as a bmp
 
-1. Contructive solid geometry
-  
+###
 
-
-2. Raycasting 
 
 
 

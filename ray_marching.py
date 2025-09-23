@@ -1,4 +1,7 @@
+import numpy as np
+
 def scene_sdf(objects,p):
+
     if len(objects) == 0:
         return 1000
     else:
@@ -7,23 +10,24 @@ def scene_sdf(objects,p):
 
 
 
-def raymarching(starting_point,direction_vector, iteration_limit= 100,precision = 0.001,clipping_distance=100):
+def cast_ray(objects,starting_point,direction_vector, iteration_limit= 100,precision = 0.001,clipping_distance=100):
     """This funtion marches a ray from the viewpoint and return the point of intersection with an object or None
        Starting point: origin of the ray -> pixel on the projective plane?
        direction vector: normalised vector that shows the direction of the ray
        objects: list of all the CSG objects -> maybe just the list of nearby objects
     """
     #think about objects within objects how should it work?
+
     p = starting_point
     dist = 0
     for _ in range(iteration_limit):
         # TODO inside of the pbject 
         p = starting_point + dist * direction_vector
 
-        d = scene_sdf(p)
+        d = scene_sdf(objects,p)
 
         if d < 0:
-            return "inside of object"
+            return {"hit":False,"inside of object":True,"distance" :dist,"point": p}
         
         if d < precision:
             return {"hit":True,"distance" :dist,"point": p}
