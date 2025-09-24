@@ -29,7 +29,7 @@ The viewport is a simple Tkinter canvas where the 3D scene is rendered using ray
 ### Control panel
 The control panel is where the user can create the scene. It is divided into several sections and buttons:
 
-![Picture of the Control Panel.](/control_panel.png)
+![Picture of the Control Panel.](/docs/control_panel.png)
 
 
 Sections:
