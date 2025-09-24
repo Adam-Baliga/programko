@@ -29,6 +29,9 @@ The viewport is a simple Tkinter canvas where the 3D scene is rendered using ray
 ### Control panel
 The control panel is where the user can create the scene. It is divided into several sections and buttons:
 
+![Picture of the Control Panel.](docs/images/control_panel.png)
+
+
 Sections:
 1. **Create objects**:
     - where the user can create primitives (box, sphere, cylinder) and add them to the scene
@@ -69,10 +72,10 @@ Sections:
         - Add light > opens a dialog to input the light position (x,y,z) and color and adds the light to the scene
         - Remove light > opens a dialog to select the light to remove from the scene
 
-7. **Action log** 
+5. **Action log** 
     - where the user can see the actions that have been performed performed
 
-8. **Bottom buttons**:
+6. **Bottom buttons**:
     - Render scene > renders the scene in the viewport
     - Save image  > opens a dialog to input the file name and saves the rendered scene as a png file
     - Clear scene > clears the scene of all objects and lights
