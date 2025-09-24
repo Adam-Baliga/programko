@@ -1,0 +1,5 @@
+#computaion
+numpy  = 2.3.3
+
+#image processing
+pillow = 11.3.0

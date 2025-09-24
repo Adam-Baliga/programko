@@ -1,6 +1,13 @@
 import numpy as np
 
 def scene_sdf(objects,p):
+    """
+    Calculate the signed distance from point p to the nearest object in the scene.
+    If there are no objects in the scene, returns a large value 1000.
+
+    p: point in space where we want to calculate the SDF
+    objects: list of all the CSG objects in the scene used to calculate the SDF
+    """
 
     if len(objects) == 0:
         return 1000
@@ -11,12 +18,19 @@ def scene_sdf(objects,p):
 
 
 def cast_ray(objects,starting_point,direction_vector, iteration_limit= 100,precision = 0.001,clipping_distance=100):
-    """This funtion marches a ray from the viewpoint and return the point of intersection with an object or None
-       Starting point: origin of the ray -> pixel on the projective plane?
-       direction vector: normalised vector that shows the direction of the ray
-       objects: list of all the CSG objects -> maybe just the list of nearby objects
     """
-    #think about objects within objects how should it work?
+    Cast a ray from a starting point in a given direction using the ray marching algorithm.
+    Is limited by iteration_limit(maximum number of iterations) and clipping_distance(maximum distance from the starting point).
+
+    objects: list of all the CSG objects in the scene - used to calculate the SDF
+    starting_point: the point from which the ray is cast - numpy array
+    direction_vector: normalized direction vector of the ray - numpy array
+    iteration_limit: maximum number of iterations to perform
+    precision: minimum distance to consider a hit
+    clipping_distance: maximum distance the ray can travel before we consider it a miss
+
+    returns: dictionary with keys "hit" (boolean), "distance" (float), "point" (numpy array)
+    """
 
     p = starting_point
     dist = 0
@@ -27,7 +41,8 @@ def cast_ray(objects,starting_point,direction_vector, iteration_limit= 100,preci
         d = scene_sdf(objects,p)
 
         if d < 0:
-            return {"hit":False,"inside of object":True,"distance" :dist,"point": p}
+            # the ray is inside of an object
+            return {"hit":False}
         
         if d < precision:
             return {"hit":True,"distance" :dist,"point": p}

@@ -5,6 +5,15 @@ import multiprocessing
 
 
 def get_normal(objects,point,epsilon=0.001):
+    """
+    Calculate the normal vector at a given point on the surface of an object using central differences.
+
+    objects: list of all the CSG objects in the scene - used to calculate the SDF
+    point: the point on the surface of the object where we want to calculate the normal vector
+    epsilon: small value used for central differences
+
+    returns: normal vector as a numpy array
+    """
     #calculate the normal at a point on the surface of an object using central differences
     #the gradient of the SDF at that point should be perpendicular to the surface 
     dx = np.array([epsilon,0,0])
@@ -22,6 +31,15 @@ def get_normal(objects,point,epsilon=0.001):
 
 
 def light_intensity(normal_vector,point,light_source):
+    """
+    Calculate the light intensity at a given point on the surface of an object. 
+    Uses ambient and diffuse lighting model.
+
+    point: point on the surface of the object - numpy array
+    normal_vector: normal vector at the point to the surface of the object - should be normalized
+    light_source: position of the light source - numpy array
+
+    """
     #ambient - even if objects are far away we can still see them 
     ambient_lighting = 0.1
 
@@ -33,7 +51,20 @@ def light_intensity(normal_vector,point,light_source):
 
     return min(ambient_lighting + diffuse_light,1)
 
+
 def render_pixel(pos,width,height,objects,camera,light_sources):
+
+    """
+    calculates the color of a single pixel at position pos (x,y) on the screen using ray marching.
+
+    pos: (x,y) tuple representing the pixel position on the screen
+    width: width of the screen in pixels
+    height: height of the screen in pixels
+    objects: dictionary of CSG objects in the scene
+    camera: camera object with position and rotation
+    light_sources: dictionary of light source objects 
+    
+    """
     WIDTH = width
     HEIGHT = height
     fov = np.pi / 3  # 60 degrees field of view
@@ -77,81 +108,39 @@ def render_pixel(pos,width,height,objects,camera,light_sources):
                 rgb[2] = min(rgb[2]+ intensity,1) 
     rgb = [*map(lambda x: int(x*255),rgb)]
     return (x,y,rgb)
+
+
 def render_scene(canvas,all_objects,camera,light_sources):
     """
     Render the scene onto the given Tkinter canvas using ray marching.
-    canvas: Tkinter canvas where the scene will be rendered
+    Uses multiprocessing to speed up the rendering process.
+
+    canvas: Tkinter canvas where the scene will be rendered, also stores the width and height
     objects: dictionary of CSG objects in the scene
     camera: camera object with position and rotation
-    light_sources: tuple of light source positions (numpy arrays)    
+    light_sources: tuple of light source positions (numpy arrays)
+
+    PROCESSES: number of processes to use for multiprocessing(default is 4)    
     """
 
+    PROCESSES = 4
 
+    width = int(canvas['width'])
+    height = int(canvas['height'])
 
-    WIDTH = int(canvas['width'])
-    HEIGHT = int(canvas['height'])
-    #camera parameters
-    fov = np.pi / 3  # 60 degrees field of view
-    aspect_ratio = WIDTH / HEIGHT
+    image = tk.PhotoImage(width=width, height=height)
+    pixels = [[i,j] for i in range(width) for j in range(height)]
 
-    image = tk.PhotoImage(width=WIDTH, height=HEIGHT)
-    pixels = [[i,j] for i in range(WIDTH) for j in range(HEIGHT)]
-
-    #
-    with multiprocessing.Pool(processes=4) as pool:
-        results = pool.starmap(render_pixel, [(pos,WIDTH,HEIGHT,all_objects,camera,light_sources) for pos in pixels])
+    
+    with multiprocessing.Pool(processes=PROCESSES) as pool:
+        results = pool.starmap(render_pixel, [(pos,width,height,all_objects,camera,light_sources) for pos in pixels])
         for x,y,rgb in results:
             image.put(f"#{rgb_to_hex(rgb)}", (x, y))
     
     canvas.image = image
-    canvas.create_image((WIDTH // 2, HEIGHT // 2), image=image, anchor=tk.CENTER)
-
-
-    # for x in range(WIDTH):
-    #     for y in range(HEIGHT):
-    #         # Start time measurement
-    #         #start = time.time()
-    #         # Normalized device coordinates
-    #         ndc_x = (x / WIDTH ) * 2 - 1
-    #         ndc_y = (y / HEIGHT ) * 2 - 1
-
-    #         # Screen space coordinates
-    #         screen_x = (ndc_x) * aspect_ratio * np.tan(fov / 2)
-    #         screen_y = (ndc_y) * np.tan(fov / 2)
-
-    #         # Ray direction
-    #         ray_direction = np.array([screen_x, screen_y,1]) @ camera.rotation
-    #         ray_direction /= np.linalg.norm(ray_direction)  # Normalize the direction
-            
-    #         objects = [obj for obj in all_objects.values() if obj.bounding_sphere_intersection]
-
-    #         result = ray_marching.cast_ray(objects,camera.position, ray_direction)
-            
-    #         rgb = [0,0,0]
-    #         if result["hit"]:
-    #             point = result["point"]
-    #             normal_vector = get_normal(objects,point)
-    #             for light_source in light_sources.values():
-    #                 intensity = light_intensity(normal_vector,point,light_source.position)
-
-    #                 if light_source.color == "white":
-    #                     rgb[0] = min(rgb[0]+ intensity,1)
-    #                     rgb[1] = min(rgb[1]+ intensity,1)
-    #                     rgb[2] = min(rgb[2]+ intensity,1)
-
-    #                 elif light_source.color == "red":
-    #                     rgb[0] = min(rgb[0]+ intensity,1)
-    #                 elif light_source.color == "green":
-    #                     rgb[1] = min(rgb[1]+ intensity,1)
-
-    #                 elif light_source.color == "blue":
-    #                     rgb[2] = min(rgb[2]+ intensity,1) 
-    #         print( rgb)
-    #         rgb = [*map(lambda x: int(x*255),rgb)]
-    #         image.put(f"#{rgb_to_hex(rgb)}", (x, y))
-
+    canvas.create_image((width // 2, height // 2), image=image, anchor=tk.CENTER)
 
 
 def rgb_to_hex(rgb):
-    """Convert an integer to an RGB tuple."""
+    """Convert an RGB tuple to a hexadecimal color string."""
     return f"{hex(rgb[0])[2:]:0>2}{hex(rgb[1])[2:]:0>2}{hex(rgb[2])[2:]:0>2}"

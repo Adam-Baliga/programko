@@ -1,7 +1,21 @@
 import numpy as np
 
 class Primitive: 
-    #the class
+    """
+    Super class for all primitives outlines the basic structure and methods that all primitives should have.
+    All primitives are centered at the origin and can be transformed using translation and rotation.
+    
+
+    attributes:
+        translation: np.array of shape (3,) representing the translation of the object in 3D space from the origin
+        rotation: np.array of shape (3,3) representing the inverse rotation matrix of the object(representing the cumulative rotation of the object)
+        bounding_sphere_radius: float representing the radius of the bounding sphere of the object - used for quick rejection of rays that are too far from the object
+
+    methods:
+        sdf(p): method that takes a point p in 3D space and returns the signed distance from the point to the surface of the object
+        reverse_transform(p): method that applies the inverse transformation (translation and rotation) to a given point p - used to calculate the sdf in the object 
+
+    """
     def __init__(self):
         #We create variables that store the transformations performed on the object
         #this allows us to consider the signed distance function(SDF) 
@@ -18,6 +32,13 @@ class Primitive:
         return p
 
 class Box(Primitive):
+    """
+    Class representing a box primitive. Inherits from Primitive class.
+    
+    Unique attributes:
+        side_lengths: np.array of shape (3,) representing the lengths of the sides of the box along the x, y, and z axes
+        """
+
     def __init__(self,length=1,width=1,height=1):
         super().__init__()
         self.side_lengths = np.array([length,width,height])
@@ -34,6 +55,13 @@ class Box(Primitive):
         
 
 class Sphere(Primitive):
+    """
+    Class representing a sphere primitive. Inherits from Primitive class.
+    
+    Unique attributes:
+        radius: float representing the radius of the sphere
+    """
+
     def __init__(self,radius=1):
         super().__init__()
         self.r = radius
@@ -48,6 +76,13 @@ class Sphere(Primitive):
 
 
 class Cylinder(Primitive):
+    """
+    Class representing a cylinder primitive. Inherits from Primitive class.
+
+    Unique attributes:
+        radius: float representing the radius of the cylinder
+        height: float representing the height of the cylinder
+    """
     def __init__(self,radius=1,height=1):
         super().__init__()
         self.r = radius
@@ -64,9 +99,27 @@ class Cylinder(Primitive):
         distance = np.minimum(np.maximum(d[0], d[1]), 0) + np.linalg.norm(np.maximum(d, 0))
         return distance
 
-#We will represent the CSG object as a binary tree, each node will either be a primitive or an operator
-#we can observe that the leaves of our binary tree will always be primitives and the other nodes will be operators
+
 class CSG_object_node:
+    """
+    Class representing a node in a CSG tree. Each node can be either a primitive or an operation (union, intersection, difference) combining two child nodes.
+    The CSG tree is used to represent complex 3D objects by combining simpler primitives using boolean operations.
+    The leaves of the tree are primitives, and the internal nodes are operations.
+
+    attributes:
+        primitive: instance of a Primitive subclass (Box, Sphere, Cylinder) if the node is a leaf, otherwise None
+        operator: string representing the operation ("union", "intersection", "difference") if the node is not a leaf, otherwise None
+        left: left child node (CSG_object_node) if the node is not a leaf, otherwise None
+        right: right child node (CSG_object_node) if the node is not a leaf, otherwise None
+
+        center: np.array of shape (3,) representing the center of rotation of the object and all its children - used for rotation transformations
+            - for leaf nodes (primitives), the center is at the origin [0,0,0]
+            - for union and intersection operations, the center is the midpoint between the centers of the two child nodes
+            - for difference operations, the center is the center of the left child node (the object that remains after the difference)
+
+    """
+
+
     def __init__(self,primitive=None,operator=None,left=None,right = None):
         self.primitive = primitive 
         self.operator = operator
@@ -83,14 +136,19 @@ class CSG_object_node:
             self.center = self.left.center
     
     def is_leaf(self):
+        """
+        True if the node is a leaf (i.e., it contains a primitive), False otherwise.
+        """
         #this funtion determines whether the node is a leaf becuase only the lease
-        return self.primitive != None
+        return self.primitive is None
     
     def bounding_sphere_intersection(self,ray_origin,ray_direction):
         """
         calcualtes whether a ray and bounding sphere intersect.
         ray_origin a point on the ray
         ray_direction: normalized direction vector of the ray
+
+        returns: True if the ray intersects the bounding sphere, False otherwise
         """
         
         if self.is_leaf():
@@ -110,15 +168,20 @@ class CSG_object_node:
     
    
     def sdf(self,p:np.array) -> np.float32:
+        """
+        calculates the signed distance from point p to the surface of the CSG object represented by the tree rooted at this node.
+
+        returns: signed distance as a float
+        """
+
         if self.is_leaf():
             return self.primitive.sdf(p)
         else:
             left_dist = self.left.sdf(p)
             right_dist = self.right.sdf(p)
             if self.operator == 'union': 
-                # this operation is not perfect while it determines the exterior distance correctly
-
-                #TODO think about how to fix this
+                # this operation is not perfect while it determines the exterior distance correctly the interior distance is not always correct
+                # for now we will use it as is
                 return min(left_dist, right_dist) 
             elif self.operator == 'intersection':
                 return max(left_dist, right_dist)
@@ -126,7 +189,12 @@ class CSG_object_node:
                 return max(left_dist, -right_dist)
             else:
                 raise ValueError("Unknown operator")
+            
+
     def translate(self,v:np.array ):
+        """
+        Translates the CSG object and all its children by vector v.
+        """
         if self.is_leaf():
             self.primitive.translation += v
         else:
@@ -134,8 +202,15 @@ class CSG_object_node:
             self.right.translate(v)
         self.center += v
 
-    def rotate(self,rot_matrix,inverse_rot_matrix): # the input should be the inverse rotation matrix
-        #have something like a center of rotation - difference the center stays with the original object,union, intersection center in the middle
+    def rotate(self,rot_matrix,inverse_rot_matrix):
+        """
+        Rotates the CSG object and all its children using the given rotation matrix.
+
+        rot_matrix: np.array of shape (3,3) representing the rotation 
+        inverse_rot_matrix: np.array of shape (3,3) representing the inverse rotation 
+        """
+
+
         if self.is_leaf():
             self.primitive.rotation = self.primitive.rotation @ inverse_rot_matrix
         else:
@@ -153,12 +228,21 @@ class CSG_object_node:
 # We define funtions whose input is are two CSG nodes and output is a new CSG node with the appropriate operator
 
 def CSG_union(obj1:CSG_object_node,obj2:CSG_object_node):
+    """ 
+    Creates a new CSG_object_node representing the union of two CSG objects.
+    """
     return CSG_object_node(operator="union",left = obj1,right=obj2)
 
 def CSG_intersection(obj1:CSG_object_node,obj2:CSG_object_node):
+    """
+    Creates a new CSG_object_node representing the intersection of two CSG objects.
+    """
     return CSG_object_node(operator="intersection",left = obj1,right=obj2)
 
 def CSG_difference(obj1:CSG_object_node,obj2:CSG_object_node):
+    """
+    Creates a new CSG_object_node representing the difference of two CSG objects (obj1 - obj2).
+    """
     return CSG_object_node(operator="difference",left = obj1,right=obj2)
 
 

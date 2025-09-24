@@ -6,32 +6,91 @@ import rendering
 
 import numpy as np
 import tkinter as tk
-from tkinter import ttk
-from tkinter import scrolledtext
+from tkinter import ttk,messagebox,simpledialog,scrolledtext
 from PIL import Image, ImageTk
 import time
 
 def save_image(imgtk):
+    """
+    Function to save the rendered image to a file. Opens a dialog to get the file name and saves the image as a PNG file.
+    Checks if there is an image to save and shows an error message if not.
+    The dialog chcecks if there is a file with the same name and asks the user to choose another one if so.
+
+    imgtk: ImageTk.PhotoImage object to be saved
+    
+    """
+
+    if imgtk is None:
+        tk.messagebox.showerror("Error", "No image to save. Please render the scene first.")
+        return
+    
+    name = get_file_name()
+    if name is None:
+        return
     img = ImageTk.getimage( imgtk )
-    img.save("rendered_image.bmp")
+    img.save(f"{name}.png")
 
 class Light_source:
-    #light source class to store the position and color of the light source
+    """
+    class to store the position and color of the light source
+
+    Attributes:
+        position: numpy array of shape (3,)
+        color: string, can be "white","red","green","blue"
+
+    """
     def __init__(self,position,color):
         self.position = position
+        if color not in ["white","red","green","blue"]:
+            raise ValueError("Color must be one of 'white','red','green','blue'")
         self.color = color
 
 class camera:
-    #camera class to store the position and rotation of the camera
+    """ 
+    class to store the position and rotation of the camera
+
+    To change the position and rotation of the camera use the translate and rotate methods
+
+    Attributes:
+        position: numpy array of shape (3,) representing the position of the camera
+        rotation: numpy array of shape (3,3) representing the rotation matrix
+
+    Example:
+
+    cam = camera(np.array([0,0,-5]))
+    cam.rotate(np.array([[-1,0,0],[0,1,0],[0,0,1]])))
+
+    """
     def __init__(self,position=np.array([0,0,0])):
         self.position = position
         self.rotation = np.eye(3)
     def rotate(self,rotation_matrix):
+        """
+        Rotate the camera by the given rotation matrix
+
+        rotation_matrix: numpy array of shape (3,3)
+        """
         self.rotation = rotation_matrix @ self.rotation
     def translate(self,translation_vector):
+        """
+        Translate the camera by the given translation vector
+        translation_vector: numpy array of shape (3,)
+        """
         self.position = self.position + translation_vector
 
 class Log():
+    """
+    class to store the log of actions performed in the application
+
+    includes methods to write to the log and clear the log
+    root: Tkinter root window
+
+    Example:
+    log = Log(root)
+    log.write("Added box1")
+    log.clear()
+    """
+
     def __init__(self,root):
         log = scrolledtext.ScrolledText(root,width=50,height=20)
         log.pack()
@@ -43,6 +102,29 @@ class Log():
         self.log.delete(1.0,tk.END)
       
 class App:
+    """
+    class for the main application that handles the UI and interactions
+
+    Input parameters:
+    camera_pos: list of 3 floats representing the initial position of the camera
+    light_pos: list of 3 floats representing the initial position of the light source
+    screen_width: int, width of the rendering screen
+    screen_height: int, height of the rendering screen
+    
+    Attributes:
+        camera_pos,light_pos
+        screen_width,screen_height
+
+        objects: dictionary of CSG objects in the scene - Key: object name, Value: CSG_object_node
+        camera: camera object
+        light_sources: dictionary of light sources in the scene - Key: color+id, Value: Light_source object
+        canvas_window: Tkinter root window for the canvas
+        canvas: Tkinter canvas on which the scene will be rendered
+        object_id: int, used to assign unique ids to objects
+        light_id: int, used to assign unique ids to light sources
+        log: Log object to write out actions performed in the application
+    
+    """
 
     def __init__(self,camera_pos = [0,0,-5],light_pos = [10,-10,10],screen_width=300,screen_height=300):
         
@@ -53,9 +135,12 @@ class App:
         self.height = screen_height
 
         window = tk.Tk()
-        window.title("CSG")
+        window.title("Rendered Scene")
 
-        self.window = window
+        self.canvas_window = window
+        self.canvas = tk.Canvas(self.canvas_window,width=self.width,height=self.height,bg="black")
+        self.canvas.pack()
+        self.canvas.image = None
 
         #used for assigning ids to objects
         self.object_id = 0 
@@ -65,10 +150,15 @@ class App:
         self.add_light(position=light_pos)
     #function to render the scene
     def render(self):
-        for widget in self.window.winfo_children():
+        """
+        Renders the scene onto the canvas in the canvas window and starts the Tkinter main loop for that window 
+        """
+
+        #clear the window of any previous canvas
+        for widget in self.canvas_window.winfo_children():
             widget.destroy()
 
-        canvas = tk.Canvas(self.window,width=self.width,height=self.height,bg="black")
+        canvas = tk.Canvas(self.canvas_window,width=self.width,height=self.height,bg="black")
         canvas.pack()
 
         self.canvas = canvas
@@ -80,10 +170,13 @@ class App:
         self.log.write(f"Scene rendered in {end_time - start_time:.2f} seconds")
 
         print("Rendering complete")
-        self.window.mainloop()
+        self.canvas_window.mainloop()
 
     #fuctions for adding, removing and manipulating objects
     def add_box(self):
+        """
+        Opens a dialog to get the dimensions of the box and adds it to the objects dictionary with a unique id  
+        """
         d = box_dialog()
         d = d.result
         if d == None:
@@ -95,10 +188,13 @@ class App:
         #wrtite to log
         self.log.write(f"Added box{self.object_id} with dimensions {d[0]}, {d[1]}, {d[2]}")
 
-        #increment the object id
+        #increment the object id to ensure unique ids
         self.object_id += 1
     
     def add_sphere(self):
+        """
+        Opens a dialog to get the radius of the sphere and adds it to the objects dictionary with a unique id
+        """
 
         d = shpere_dialog()
         d = d.result
@@ -113,6 +209,9 @@ class App:
         self.object_id += 1
     
     def add_cylinder(self):
+        """
+        Opens a dialog to get the radius and height of the cylinder and adds it to the objects dictionary with a unique id
+        """
 
         d = cylinder_dialog()
         d = d.result
@@ -125,6 +224,10 @@ class App:
         self.object_id += 1   
 
     def remove_object(self,object_name=None):
+        """
+        Removes the object with the given name from the objects dictionary or opens a dialog to get the name if not provided
+        """
+
         
         if object_name == None:
             object_name = get_object(title="Remove object",objects=self.objects)
@@ -137,6 +240,10 @@ class App:
 
             
     def translate_object(self):
+        """
+        Opens a dialog to get the object name and translation vector and translates the object by that vector
+        """
+
         object_name,translation_vector = get_translation(objects=self.objects)
 
         if object_name in self.objects:
@@ -146,6 +253,12 @@ class App:
             print(f"Object {object_name} not found")
 
     def rotate_object(self):
+        """
+        Opens a dialog to get the object name, angle and rotation plane and rotates the object by that angle in that plane
+        positive angle -> counter clockwise
+        negative angle -> clockwise
+        """
+
         object_name,angle,rotation_plane = get_rotation(objects=self.objects)
 
         angle = np.radians(angle)
@@ -163,8 +276,9 @@ class App:
 
     def combine_objects(self,operation):
         """
-        Takes an operation (union, difference, intersection) and combines them into a new object and removes the original objects.
-        The new object is named "combined-{operation}{id}"
+        Opens a dialog to get the names of the two objects to be combined and combines them using the given operation
+
+        operation: string, can be "union","difference","intersection"
         """
         result = get_2_objects(title=operation,objects=self.objects)
         
@@ -192,11 +306,20 @@ class App:
 
     #function to manipulate the camera
     def move_camera(self,translation_vector):
+        """
+        Moves the camera by the given translation vector
+        translation_vector: list of 3 floats
+        """
+
         self.camera.translate(np.array(translation_vector))
 
         self.log.write(f"Moved camera by vector {translation_vector}")
     
     def rotate_camera(self,angle,rotation_plane:str):
+        """
+        rotates the camera by the given angle in the given rotation plane
+        positive angle -> counter clockwise
+        """
         angle = np.radians(angle)
         self.camera.rotate(rotation.rotation_matrix(angle,rotation_plane))
 
@@ -205,6 +328,11 @@ class App:
 
     #function to manipulate the light sources
     def add_light(self,position=None,color="white"):
+        """
+        Adds a light source at the given position with the given color or opens a dialog to get the position and color if not provided
+        position: list of 3 floats
+        color: string, can be "white","red","green","blue"    
+        """
         if position is None:
             position,color = get_light_source()
             self.log.write(f"Added {color} light source at position {position}")
@@ -215,6 +343,9 @@ class App:
         self.light_id += 1
 
     def remove_light(self,light_id):
+        """
+        Removes the light source with the given id from the light_sources dictionary 
+        """
         if light_id in self.light_sources:
             del self.light_sources[light_id]
             self.log.write(f"Removed light source {light_id}")
@@ -222,6 +353,9 @@ class App:
             print(f"Light source {light_id} not found")
 
     def change_resolution(self):
+        """
+        Opens a dialog to get the new resolution and changes the width and height of the rendering screen
+        """
         width,height = get_resolution()
         if width == None or height == None:
             return
@@ -232,6 +366,22 @@ class App:
     
     #UI
     def setup_ui(self):
+        """
+        Main method of the application that sets up the UI in a separate window and starts the Tkinter main loop for that window
+
+        5 main panels:
+            1. Creating objects: sphere,box,cylinder
+            2. Combining objects : union, intersection, difference, remove object
+            3. Transforming objects : translate, rotate
+            4. Camera and lighting controls : move camera, rotate camera, add light, remove light
+            5. Log of actions performed: shows all the actions performed in the application
+
+        3 buttons:
+            button to render the scene 
+            button to change the resolution of the rendering screen
+            button to save the rendered image
+
+        """
         root = tk.Tk()
         root.title("CSG Application")
 

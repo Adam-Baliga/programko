@@ -1,6 +1,7 @@
 import tkinter
 from tkinter import ttk
 from tkinter import simpledialog,messagebox
+import os
 
 def xyz_coordinates_entries(frame, entry_row):
         """
@@ -8,17 +9,17 @@ def xyz_coordinates_entries(frame, entry_row):
         
         """
         # Center X
-        ttk.Label(frame, text="Center X:").grid(row=entry_row, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(frame, text="X:").grid(row=entry_row, column=0, padx=5, pady=5, sticky="w")
         x_entry = ttk.Entry(frame)
         x_entry.grid(row=entry_row, column=1, padx=5, pady=5, sticky="ew")
 
         # Center Y
-        ttk.Label(frame, text="Center Y:").grid(row=entry_row, column=2, padx=5, pady=5, sticky="w")
+        ttk.Label(frame, text="Y:").grid(row=entry_row, column=2, padx=5, pady=5, sticky="w")
         y_entry = ttk.Entry(frame)
         y_entry.grid(row=entry_row, column=3, padx=5, pady=5, sticky="ew")
 
         # Center Z
-        ttk.Label(frame, text="Center Z:").grid(row=entry_row, column=4, padx=5, pady=5, sticky="w")
+        ttk.Label(frame, text="Z:").grid(row=entry_row, column=4, padx=5, pady=5, sticky="w")
         z_entry = ttk.Entry(frame)
         z_entry.grid(row=entry_row, column=5, padx=5, pady=5, sticky="ew")
 
@@ -26,6 +27,10 @@ def xyz_coordinates_entries(frame, entry_row):
 
 
 def simple_field(frame,entry_row,prompt):
+        """
+        Returns a single entry field with a prompt label
+        """
+
         ttk.Label(frame, text=prompt).grid(row=entry_row, column=0, padx=5, pady=5, sticky="w")
         entry = ttk.Entry(frame)
         entry.grid(row=entry_row, column=1, padx=5, pady=5, sticky="ew")
@@ -36,6 +41,12 @@ def simple_field(frame,entry_row,prompt):
 
 
 class shpere_dialog(simpledialog.Dialog):
+    """
+    A dialog to get the radius of the sphere.Checks that the input is a valid number.
+
+    Attributes:
+        result (list): None if the dialog was cancelled, otherwise a list(radius)
+    """
 
     def __init__(self, parent=None, title = None):
 
@@ -48,6 +59,9 @@ class shpere_dialog(simpledialog.Dialog):
         #self.center_entries = center_coordinates_entries(master,1)
 
     def validate(self):
+        """
+        Function that runs when the ok button is pressed. Validates the input and sets the result attribute
+        """
         #radius
         try:
             radius = self.getdouble(self.radius_entry.get())
@@ -63,6 +77,12 @@ class shpere_dialog(simpledialog.Dialog):
         return 1
  
 class box_dialog(simpledialog.Dialog):
+    """
+    A dialog to get the dimensions of the box. Checks that the inputs are valid numbers.
+
+    Attributes:
+        result (list): None if the dialog was cancelled, otherwise a list(length,width,height)
+    """
      
     def __init__(self, parent=None, title = None):
           
@@ -75,6 +95,9 @@ class box_dialog(simpledialog.Dialog):
         self.height_entry = simple_field(master,2,"Height: ")
 
     def validate(self):
+        """
+        Function that runs when the ok button is pressed. Validates the input and sets the result attribute
+        """
         #dimension of the box
         dims = []
         for name,entry in [("length",self.length_entry),("width",self.width_entry),("height",self.height_entry)]:
@@ -92,6 +115,11 @@ class box_dialog(simpledialog.Dialog):
         return 1
     
 class cylinder_dialog(simpledialog.Dialog):
+    """
+    Dialog to get the dimensions of the cylinder. Checks that the inputs are valid numbers.
+    Attributes:
+        result (list): None if the dialog was cancelled, otherwise a list(radius,height)   
+    """
     def __init__(self, parent=None, title = None):
           
         super().__init__(parent, "Cylinder")
@@ -120,6 +148,14 @@ class cylinder_dialog(simpledialog.Dialog):
      
 
 class Dialog_2_objects(simpledialog.Dialog):
+    """
+    Dialog to get two objects from a list of objects. Creates two fields with a dropdown menu to select the objects.
+
+    Objects: list of object names
+    
+    Attributes:
+        result (tuple): None if the dialog was cancelled, otherwise a tuple (obj_name1,obj_name2)
+    """
     def __init__(self, parent=None, title=None, objects=[]):
         self.objects = objects
         super().__init__(parent, title)
@@ -179,6 +215,12 @@ def get_2_objects(title:str,objects:dict):
     return d.result
         
 class Dialog_1_object(simpledialog.Dialog):
+    """
+    Dialog to get one object from a list of objects. Creates a field with a dropdown menu to select the object.
+    Objects: list of object names
+    Attributes:
+        result (str): None if the dialog was cancelled, otherwise the name of the selected object
+    """
     def __init__(self, parent=None, title=None, objects=[]):
         self.objects = objects
         super().__init__(parent, title)
@@ -210,12 +252,18 @@ class Dialog_1_object(simpledialog.Dialog):
 
         
 def get_object(title,objects):
+    """
+    Takes in the title of the pop-up and the objects returns the name of the selected object or None 
+    """
     d = Dialog_1_object(title=title,objects=[*objects.keys()])
     return d.result
 
 class Dialog_translation(simpledialog.Dialog):
     """
     class for the dialog that asks for the transaltion vector and the object to translate in one dialog
+
+    Attributes:
+        result (tuple): None if the dialog was cancelled, otherwise a tuple (obj_name,[x,y,z])
     """
     def __init__(self, parent=None, title=None,objects=[]):
         self.objects = objects
@@ -233,22 +281,7 @@ class Dialog_translation(simpledialog.Dialog):
 
         ttk.Label(master, text="Translation vector:").grid(row=1, column=0, padx=5, pady=5, sticky="w", columnspan=6)
 
-        ttk.Label(master, text="X:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
-        x_entry = ttk.Entry(master)
-        x_entry.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
-
-        ttk.Label(master, text="Y:").grid(row=2, column=2, padx=5, pady=5, sticky="w")
-        y_entry = ttk.Entry(master)
-        y_entry.grid(row=2, column=3, padx=5, pady=5, sticky="ew")
-
-        ttk.Label(master, text="Z:").grid(row=2, column=4, padx=5, pady=5, sticky="w")
-        z_entry = ttk.Entry(master)
-        z_entry.grid(row=2, column=5, padx=5, pady=5, sticky="ew")
-
-        self.x_entry = x_entry
-        self.y_entry = y_entry
-        self.z_entry = z_entry
-
+        self.x_entry,self.y_entry,self.z_entry = xyz_coordinates_entries(master,2)
 
     def validate(self):
         obj1 = self.object.get()
@@ -276,6 +309,9 @@ class Dialog_translation(simpledialog.Dialog):
         return 1
 
 def get_translation(objects:dict):
+    """
+    Takes in the objects returns a tuple (obj_name,[x,y,z]) or None if cancelled
+    """
     d = Dialog_translation(title="Translate object",objects=[*objects.keys()])
     return d.result
 
@@ -283,6 +319,13 @@ def get_translation(objects:dict):
 class Dialog_rotation(simpledialog.Dialog):
     """
     class for the dialog that asks for the rotation angle and plane and the object to rotate in one dialog
+
+    Objects: list of object names
+    rotation plane: "xy","yz","xz"
+    angle: in degrees
+
+    Attributes:
+        result (tuple): None if the dialog was cancelled, otherwise a tuple (obj_name,angle,plane)
     """
     def __init__(self, parent=None, title=None,objects=[]):
         self.objects = objects
@@ -449,24 +492,42 @@ class Dialog_light_source(simpledialog.Dialog):
 
 
 def get_translation_vector():
+    """
+    Prompts the user to enter the translation vector. Returns a list [x,y,z] or None if cancelled.
+    """
     d = Dialog_xyz_coordinates(title="Translation vector")
     return d.result
 
 def get_light_id(light_sources:dict):
+    """
+    Prompts the user to select a light source from the list of light sources. Returns the name of the selected light source or None if cancelled.
+    """
     d = Dialog_1_object(title="Select light source",objects=[*light_sources.keys()])
     return d.result
 
 
 def get_camera_rotation():
+    """
+    Prompts the user to enter the angle and the plane that they want the camera to rotate. Returns a tuple (angle,plane) or None if cancelled.
+    """
+
     d = Dialog_only_rotation(title="Camera rotation")
     return d.result
 
 def get_light_source():
+    """
+    Prompts the user to enter the position and color of the light source. Returns a tuple ([x,y,z],color) or None if cancelled.
+    """
     d = Dialog_light_source(title="Add light source")
     return d.result
 
 
 class Dialog_resolution(simpledialog.Dialog):
+    """
+    A dialog to get the resolution of the image. Checks that the inputs are valid positive integers.
+    Attributes:
+        result (list): None if the dialog was cancelled, otherwise a list [width,height]
+    """
     def __init__(self, parent=None, title=None):
         super().__init__(parent, title)
 
@@ -494,5 +555,52 @@ class Dialog_resolution(simpledialog.Dialog):
         return 1
     
 def get_resolution():
+    """
+    Prompts the user to enter the resolution of the image. Returns a list [width,height] or None if cancelled.
+    """
     d = Dialog_resolution(title="Set resolution")
+    return d.result
+
+
+class Dialog_file_name(simpledialog.Dialog):
+    """
+    A dialog to get the file name to save the image. Checks that the input is valid and that the file does not already exist.
+
+    Attributes:
+        result (str): None if the dialog was cancelled, otherwise the file name without extension
+    """
+
+    def __init__(self, parent=None, title=None):
+        super().__init__(parent, title)
+
+    def body(self,master):
+
+        self.file_name_entry = simple_field(master,0,"File name (without extension): ")
+
+    def validate(self):
+        file_name = self.file_name_entry.get()
+        file_name = file_name.strip()
+        if not file_name:
+            messagebox.showwarning(
+                "Illegal value",
+                f"File name cannot be empty"+ "\nPlease try again",
+                parent = self
+            )
+            return 0
+        if os.path.exists(file_name + ".png"):
+            messagebox.showwarning(
+                "Illegal value",
+                f"File {file_name}.png already exists"+ "\nPlease choose another filename or delete the existing file",
+                parent = self
+            )
+            return 0  
+        self.result = file_name
+        return 1
+    
+def get_file_name():
+    """
+    Prompts the user to enter a file name to save the image. Returns the file name without extension or None if cancelled. 
+    Checks that the file does not already exist.
+    """
+    d = Dialog_file_name(title="Enter file name")
     return d.result
