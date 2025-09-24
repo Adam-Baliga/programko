@@ -15,7 +15,7 @@ pip install -r requirements.txt
 
 ### Running the Application
 
-To run the CSG editor run the main.py file.
+To run the CSG editor run the main.py file in the code directory.
 
 ## UI overview <a name="ui-overview"></a>
 There are 2 main sections of the UI:

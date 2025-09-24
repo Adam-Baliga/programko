@@ -2,13 +2,9 @@
 
 ## Table of Contents
 
-2. [Core Components](#core-components)
-3. [Module Reference](#module-reference)
-4. [Data Structures](#data-structures)
-5. [Algorithms](#algorithms)
-6. [Extension Points](#extension-points)
-7. [Performance Considerations](#performance-considerations)
-8. [Development Guidelines](#development-guidelines)
+1. [Core Components](#core-components)
+2. [Module Reference](#module-reference)
+2. [Algorithms](#algorithms)
 
 
 ## Core Components
@@ -82,7 +78,7 @@ class CSG_object_node:
 
 ### ray_marching.py
 
-#### Core Algorithm
+#### core Ray Marching Algorithm
 
 ```python
 def cast_ray(objects, starting_point, direction_vector, 
@@ -104,7 +100,6 @@ def cast_ray(objects, starting_point, direction_vector,
 **Optimization Techniques:**
 - Bounding sphere intersection tests
 - Early ray termination
-- Adaptive precision thresholds
 
 ### rendering.py
 
@@ -148,11 +143,6 @@ class App:
     log: Log                  # Action logging system
 ```
 
-**State Management:**
-- Centralized object registry with unique IDs
-- Immutable transformations (objects are replaced, not modified)
-- Comprehensive action logging for debugging
-
 **UI Organization:**
 - **Panel 1**: Object creation (primitives)
 - **Panel 2**: Boolean operations 
@@ -160,31 +150,7 @@ class App:
 - **Panel 4**: Camera and lighting
 - **Panel 5**: Action log
 
-## Data Structures
-
-### Coordinate Systems
-
-**World Space**: Global 3D coordinate system
-- Camera and lights positioned in world space
-- Final object positions after all transformations
-
-**Object Space**: Local coordinate system for each primitive
-- All primitives defined at origin initially
-- Transformations convert world→object space for SDF evaluation
-
-**Screen Space**: 2D projection for rendering
-- Normalized device coordinates [-1,1]
-- Field of view and aspect ratio corrections
-
-### Transformation Chain
-
-```python
-# Forward transform: Object → World
-world_point = object_point @ rotation_matrix + translation
-
-# Reverse transform: World → Object (used in SDF)
-object_point = (world_point - translation) @ inverse_rotation
-```
+## Algorithms
 
 ### Tree Traversal for SDF
 
@@ -204,9 +170,25 @@ def sdf(self, p: np.array) -> float:
             return max(left_dist, -right_dist)
 ```
 
-## Algorithms
+We traverse the CSG tree recursively - inorder, combining SDF values based on the operation at each node.
+
+**Union**: The minimum distance from either child, if one is negative, the result is negative - thus the point is inside. Also if both are positive, the result is the distance to the closest surface.
+
+**Intersection**: The maximum distance from either child, if both are negative, the result is negative - thus the point is inside both. If one is positive, the result is positive - thus the point is outside at least one.
+
+**Difference**: The maximum of the left distance and the negation of the right distance. This effectively subtracts the right shape from the left. 
+    - If the point is inside the left shape and outside the right, the result is negative (inside).
+    - If it's outside the left or inside the right, the result is positive (outside).
+    - If it's inside both, the result is positive (outside).
+
+
+
+
 
 ### Signed Distance Functions
+
+>[!Note]
+>A great source of information for this project is Inigo Quilez's website. The SDFs implemented here are based on his work: https://iquilezles.org/articles/ distfunctions/. He also included explanations and visualizations of the SDFs.
 
 **Box SDF:**
 ```python
@@ -217,6 +199,16 @@ def sdf(self, p: np.array):
     # Distance to box surface
     return np.linalg.norm(np.maximum(q, 0)) + min(0, max(q[0], q[1], q[2]))
 ```
+The box SDF uses symmetry by taking the absolute value of the point coordinates, simplifying distance calculations. 
+then we can think about the calculations of the SDF this way:
+
+1. first we shift the point so that the upper left corner of the box coencides with the origin
+```python
+    q = p - (self.side_lengths / 2)
+```
+2. Then we can distinguish 2 situations:
+    - At least one coordinate is positive: that means this term "min(0, max(q[0], q[1], q[2]))"  is 0, and the other part calculates the distance from the nearest face, edge
+    - All coordinates are negative then this "np.linalg.norm(np.maximum(q, 0))" is 0 and the other part calculates the closest face
 
 **Sphere SDF:**
 ```python
@@ -225,6 +217,9 @@ def sdf(self, p: np.array):
     return np.linalg.norm(p) - self.radius
 ```
 
+The sphere SDF is straightforward, calculating the distance from the point to the sphere's center and subtracting the radius.
+
+
 **Cylinder SDF:**
 ```python
 def sdf(self, p: np.array):
@@ -232,7 +227,50 @@ def sdf(self, p: np.array):
     p = np.abs(p)
     d = np.array([np.linalg.norm(p[:2]) - self.r, p[2] - self.h / 2])
     return np.minimum(np.maximum(d[0], d[1]), 0) + np.linalg.norm(np.maximum(d, 0))
+
 ```
+
+The cylinder SDF uses symmetry by taking the absolute value of the point coordinates, simplifying distance calculations. 
+then we can think about the calculations of the SDF this way:
+Two important signed distances are calculated:
+1. distance in the xy-plane from the point to the cylinder's side surface (d[0])
+2 . distance along the z-axis from the point to the cylinder's top or bottom face (d[1])
+
+Then we can distinguish 2 situations:
+- At least one of these distances is positive: the point is outside the cylinder. The SDF combines these distances to calculate the shortest distance to the cylinder's surface.
+
+- Both distances are negative: the point is inside the cylinder. The SDF returns the maximum of these distances, which since negative will be the closest distance to the cylinder's surface (negative value).
+
+### Ray Marching
+
+```python 
+def cast_ray(objects, starting_point, direction_vector, 
+            iteration_limit=100, precision=0.001, clipping_distance=100):
+    p = starting_point
+    dist = 0
+    for _ in range(iteration_limit):
+        p = starting_point + dist * direction_vector
+
+        d = scene_sdf(objects,p)
+
+        if d < 0:
+            # the ray is inside of an object
+            return {"hit":False}
+        
+        if d < precision:
+            return {"hit":True,"distance" :dist,"point": p}
+        
+        dist += d
+
+        if dist > clipping_distance:
+            #the the ray is too far so we say it did not hit
+            return {"hit":False}
+
+    #the ray did not hit anythig after the set about of iterations
+    return {"hit":False}
+```
+
+The ray marching algorithm works by iteratively stepping along the ray in increments determined by the SDF value at the current position. This is known as sphere tracing.
 
 ### Normal Calculation
 
@@ -265,228 +303,25 @@ def bounding_sphere_intersection(self, ray_origin, ray_direction) -> bool:
         return (self.left.bounding_sphere_intersection(ray_origin, ray_direction) or
                 self.right.bounding_sphere_intersection(ray_origin, ray_direction))
 ```
+First we shift the sphere center by subtracting the translation vector from the ray origin. 
+Then we calculate the shortest distance from the ray to the sphere center using vector projection.
 
-## Extension Points
-
-### Adding New Primitives
-
-1. **Create primitive class**:
+### Lighting Calculation
 ```python
-class Torus(Primitive):
-    def __init__(self, major_radius=2, minor_radius=1):
-        super().__init__()
-        self.R = major_radius
-        self.r = minor_radius
-        self.bounding_sphere_radius = major_radius + minor_radius
+def light_intensity(point, normal_vector, light_source):
+    #ambient - even if objects are far away we can still see them 
+    ambient_lighting = 0.1
+
+    #diffuse - depends on the angle between the light source and the normal vector
+    light_direction = light_source - point
+    light_direction /= np.linalg.norm(light_direction)
     
-    def sdf(self, p: np.array):
-        p = self.reverse_transform(p)
-        q = np.array([np.linalg.norm(p[:2]) - self.R, p[2]])
-        return np.linalg.norm(q) - self.r
+    diffuse_light = max(np.dot(normal_vector,light_direction),0)
+
+    return min(ambient_lighting + diffuse_light,1)   
 ```
 
-2. **Add UI dialog**:
-```python
-class torus_dialog(simpledialog.Dialog):
-    # Implementation similar to existing dialogs
-```
-
-3. **Register in main application**:
-```python
-def add_torus(self):
-    d = torus_dialog()
-    if d.result:
-        major_r, minor_r = d.result
-        self.objects[f"torus{self.object_id}"] = csg.CSG_object_node(Torus(major_r, minor_r))
-        self.object_id += 1
-```
-
-### Adding New Operations
-
-```python
-def CSG_smooth_union(obj1: CSG_object_node, obj2: CSG_object_node, k=0.1):
-    """Smooth union operation for organic blending."""
-    return CSG_object_node(operator="smooth_union", left=obj1, right=obj2, blend_factor=k)
-
-# Add to CSG_object_node.sdf():
-elif self.operator == 'smooth_union':
-    h = max(0, min(1, (0.5 + (right_dist - left_dist) / (2 * self.blend_factor))))
-    return lerp(right_dist, left_dist, h) - self.blend_factor * h * (1 - h)
-```
-
-### Custom Shaders
-
-```python
-def custom_lighting(normal_vector, point, light_source, material_properties):
-    """Extended lighting with material properties."""
-    # Implement Phong, Blinn-Phong, or PBR lighting
-    ambient = material_properties.ambient
-    diffuse = material_properties.diffuse * lambertian_factor
-    specular = material_properties.specular * specular_factor
-    return ambient + diffuse + specular
-```
-
-## Performance Considerations
-
-### Memory Usage
-
-**Object Storage:**
-- Objects stored in dictionaries with string keys
-- NumPy arrays for efficient mathematical operations
-- Tree structures minimize memory overhead for complex scenes
-
-**Ray Marching Optimization:**
-- Bounding sphere tests eliminate ~60-80% of unnecessary SDF calls
-- Adaptive step sizes reduce iteration counts
-- Early termination for rays that miss scene bounds
-
-### Computational Complexity
-
-**SDF Evaluation**: O(n) where n = number of primitives in scene
-**Ray Marching**: O(m) where m = average iterations per ray (typically 10-50)
-**Rendering**: O(w × h × n × m) for full scene
-
-**Bottlenecks:**
-1. **SDF computation** - Most expensive per-pixel operation
-2. **Normal calculation** - Requires 6 additional SDF evaluations per hit
-3. **Multiprocessing overhead** - Process creation and data serialization
-
-### Optimization Strategies
-
-**Spatial Optimization:**
-```python
-# Current: Bounding spheres
-# Potential: Octree spatial partitioning, BVH (Bounding Volume Hierarchy)
-```
-
-**Algorithmic Improvements:**
-```python
-# Current: Central differences for normals
-# Potential: Analytical normals where possible, tetrahedron technique
-```
-
-**Rendering Optimizations:**
-```python
-# Current: Brute force all pixels
-# Potential: Adaptive sampling, progressive rendering, LOD systems
-```
-
-## Development Guidelines
-
-### Code Style
-
-**Naming Conventions:**
-- Classes: `PascalCase` (e.g., `CSG_object_node`)
-- Functions: `snake_case` (e.g., `cast_ray`)
-- Constants: `UPPER_CASE` (e.g., `ITERATION_LIMIT`)
-- Private methods: `_snake_case` prefix
-
-**Type Hints:**
-```python
-def sdf(self, p: np.array) -> float:
-    """Always specify parameter and return types."""
-    
-def cast_ray(objects: list[CSG_object_node], 
-             starting_point: np.array, 
-             direction_vector: np.array) -> dict:
-    """Use descriptive parameter names and return type hints."""
-```
-
-### Error Handling
-
-**Validation Patterns:**
-```python
-def validate_primitive_parameters(self, **params):
-    """Validate geometric parameters before object creation."""
-    for name, value in params.items():
-        if not isinstance(value, (int, float)) or value <= 0:
-            raise ValueError(f"Parameter {name} must be positive number")
-```
-
-**Graceful Degradation:**
-```python
-def render_with_fallback(self):
-    """Attempt multiprocessing, fall back to single-threaded."""
-    try:
-        return self.render_multiprocess()
-    except Exception as e:
-        self.log.write(f"Multiprocessing failed: {e}, using single thread")
-        return self.render_single_thread()
-```
-
-### Testing Strategies
-
-**Unit Tests:**
-```python
-def test_sphere_sdf():
-    """Test sphere SDF for known values."""
-    sphere = Sphere(radius=1.0)
-    
-    # Test surface points
-    assert abs(sphere.sdf(np.array([1, 0, 0]))) < 1e-6
-    assert abs(sphere.sdf(np.array([0, 1, 0]))) < 1e-6
-    
-    # Test interior/exterior
-    assert sphere.sdf(np.array([0, 0, 0])) < 0  # Inside
-    assert sphere.sdf(np.array([2, 0, 0])) > 0  # Outside
-```
-
-**Integration Tests:**
-```python
-def test_csg_operations():
-    """Test CSG boolean operations."""
-    box = CSG_object_node(Box(2, 2, 2))
-    sphere = CSG_object_node(Sphere(1.5))
-    
-    union = CSG_union(box, sphere)
-    intersection = CSG_intersection(box, sphere)
-    difference = CSG_difference(box, sphere)
-    
-    # Test SDF values at known points
-    test_point = np.array([0.5, 0.5, 0.5])
-    assert union.sdf(test_point) < 0
-    assert intersection.sdf(test_point) < 0
-```
-
-### Debugging Tools
-
-**Logging System:**
-```python
-class DebugLog(Log):
-    """Extended logging with debug levels."""
-    
-    def debug(self, message):
-        if DEBUG_MODE:
-            self.write(f"DEBUG: {message}")
-    
-    def performance(self, operation, time_taken):
-        self.write(f"PERF: {operation} took {time_taken:.3f}s")
-```
-
-**Visualization Helpers:**
-```python
-def visualize_sdf_slice(objects, y=0, resolution=100):
-    """Generate 2D SDF visualization for debugging."""
-    # Create heatmap of SDF values in XZ plane
-```
-
-### Future Enhancements
-
-**Planned Features:**
-- [ ] Material system with texture support
-- [ ] Animation system with keyframe interpolation
-- [ ] Advanced lighting (shadows, reflections)
-- [ ] Export to standard 3D formats (STL, OBJ)
-- [ ] GPU acceleration with compute shaders
-- [ ] Procedural texture generation
-- [ ] Physics simulation integration
-
-**Architecture Improvements:**
-- [ ] Plugin system for custom primitives
-- [ ] Scripting interface (Python API)
-- [ ] Undo/redo system with command pattern
-- [ ] Scene serialization and loading
-- [ ] Multi-threaded UI with background rendering
+Calculates ambient and diffuse lighting at a point based on the normal vector and light source position.
 
 ---
 
