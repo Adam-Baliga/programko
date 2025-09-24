@@ -96,7 +96,7 @@ Sections:
 7. Click the "Save image" button to save the rendered scene as a png file.
 
 
-
+*This documentation was made with the help of AI tools: Claude and GitHub Copilot*
 
 
 
