@@ -18,6 +18,10 @@ cd programko
 pip install -r requirements.txt
 ```
 
+### Setup
+To launch the application run the main.py file in the code directory
+
+
 
 
 
