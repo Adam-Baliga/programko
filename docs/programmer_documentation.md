@@ -326,3 +326,4 @@ Calculates ambient and diffuse lighting at a point based on the normal vector an
 ---
 
 *This documentation covers the core architecture and implementation details. For user-facing documentation, see the [User Guide](user-guide.md).*
+*This documentation was made with the help of AI tools: Claude and GitHub Copilot*
