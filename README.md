@@ -11,10 +11,12 @@ CSG is a technique of generating objects by combining primitive objects/primitiv
 - save the rendered scene as a bmp
 
 ### installation
-´
+
+```
 git clone https://github.com/Adam-Baliga/programko
+cd programko
 pip install -r requirements.txt
-´
+```
 
 
 
