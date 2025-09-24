@@ -82,8 +82,8 @@ Sections:
     - Change resolution > opens a dialog to input the new resolution (width, height) of the viewport
   
 > [!NOTE]
-> By default the app creates a white light source at [10,10,-10]./n
-> The default camera position is [0,0,-5] /n
+> By default the app creates a white light source at [10,10,-10].
+> The default camera position is [0,0,-5] 
 > The camera looking direction is always preset to [0,0,1] (rn the preset cannot be changed) but the direction can be andjusted using camera rotation.
 
 ### Example workflow
