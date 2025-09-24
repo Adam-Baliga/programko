@@ -92,7 +92,7 @@ class Log():
     """
 
     def __init__(self,root):
-        log = scrolledtext.ScrolledText(root,width=50,height=20)
+        log = scrolledtext.ScrolledText(root,width=60,height=20)
         log.pack()
         self.log = log
     def write(self,message):
@@ -148,6 +148,8 @@ class App:
 
         self.light_sources = dict()
         self.add_light(position=light_pos)
+
+
     #function to render the scene
     def render(self):
         """
@@ -171,6 +173,19 @@ class App:
 
         print("Rendering complete")
         self.canvas_window.mainloop()
+
+    #function to clear the scene
+
+    def clear_scene(self):
+        """
+        Clears the scene by removing all objects and light sources from the scene
+        """
+        self.objects = dict()
+        self.light_sources = dict()
+        self.object_id = 0
+        self.light_id = 0
+        self.log.clear()
+        self.log.write("Cleared scene - all objects and light sources removed")
 
     #fuctions for adding, removing and manipulating objects
     def add_box(self):
@@ -200,7 +215,6 @@ class App:
         d = d.result
         if d == None:
             return
-
 
         self.objects[f"sphere{self.object_id}"] = csg.CSG_object_node(csg.Sphere(d[0]))
         #wrtite to log
@@ -254,22 +268,22 @@ class App:
 
     def rotate_object(self):
         """
-        Opens a dialog to get the object name, angle and rotation plane and rotates the object by that angle in that plane
+        Opens a dialog to get the object name, angle and rotation axis and rotates the object by that angle around its center along that axis
         positive angle -> counter clockwise
         negative angle -> clockwise
         """
 
-        object_name,angle,rotation_plane = get_rotation(objects=self.objects)
+        object_name,angle,rotation_axis = get_rotation(objects=self.objects)
 
         angle = np.radians(angle)
 
         if object_name in self.objects:
-            rot_mat = rotation.rotation_matrix(angle,rotation_plane,inverse=False)
-            inverse_rot_mat = rotation.rotation_matrix(angle,rotation_plane,inverse=True)
+            rot_mat = rotation.rotation_matrix(angle,rotation_axis,inverse=False)
+            inverse_rot_mat = rotation.rotation_matrix(angle,rotation_axis,inverse=True)
 
 
             self.objects[object_name].rotate(rot_mat,inverse_rot_mat)
-            self.log.write(f"Rotated object {object_name} by {np.degrees(angle)} degrees in the {rotation_plane} plane")
+            self.log.write(f"Rotated object {object_name} by {np.degrees(angle)} degrees along the {rotation_axis} axis")
 
         else:
             print(f"Object {object_name} not found")
@@ -304,26 +318,37 @@ class App:
         else:
             print(f"One or both objects not found: {obj_name1}, {obj_name2}")
 
+
+
     #function to manipulate the camera
-    def move_camera(self,translation_vector):
+    def move_camera(self,position_vector):
         """
-        Moves the camera by the given translation vector
-        translation_vector: list of 3 floats
+        Moves the camera to the given position
+        positon_vector: list of 3 floats
         """
+        
+        if position_vector is None:
+            return
+        self.camera.position = (np.array(position_vector))
 
-        self.camera.translate(np.array(translation_vector))
 
-        self.log.write(f"Moved camera by vector {translation_vector}")
+
+        self.log.write(f"Moved camera to {position_vector}")
     
-    def rotate_camera(self,angle,rotation_plane:str):
+    def rotate_camera(self,info):
         """
-        rotates the camera by the given angle in the given rotation plane
+        rotates the camera by the given angle along the given rotation axis
         positive angle -> counter clockwise
         """
+        if info is None:
+            return
+        
+        else:
+            angle,rotation_axis = info
         angle = np.radians(angle)
-        self.camera.rotate(rotation.rotation_matrix(angle,rotation_plane))
+        self.camera.rotate(rotation.rotation_matrix(angle,rotation_axis))
 
-        self.log.write(f"Rotated camera by {np.degrees(angle)} degrees in the {rotation_plane} plane")
+        self.log.write(f"Rotated camera by {np.degrees(angle)} degrees along the {rotation_axis} axis")
 
 
     #function to manipulate the light sources
@@ -397,8 +422,8 @@ class App:
 
         primitives = [
         ("Sphere", self.add_sphere),
-        ("box", self.add_box),
-        ("cylinder",self.add_cylinder)
+        ("Box", self.add_box),
+        ("Cylinder",self.add_cylinder)
         ]
     
         for i, (name, command) in enumerate(primitives):
@@ -416,8 +441,8 @@ class App:
 
         operations = [
         ("Union", lambda : self.combine_objects("union")),
-        ("intersection", lambda: self.combine_objects("intersection")),
-        ("difference",lambda: self.combine_objects("difference")),
+        ("Intersection", lambda: self.combine_objects("intersection")),
+        ("Difference",lambda: self.combine_objects("difference")),
         ("Remove object",self.remove_object)
         ]
 
@@ -442,8 +467,12 @@ class App:
 
 
         #render button
-        render_scene_button = ttk.Button(main_container,command=self.render,text="render scene")
-        render_scene_button.grid(row=1,column=0,columnspan=2,padx=10,pady=10)
+        render_scene_button = ttk.Button(main_container,command=self.render,text="Render scene")
+        render_scene_button.grid(row=1,column=0,padx=10,pady=10)
+
+        #clear scene button
+        clear_scene_button = ttk.Button(main_container,command=self.clear_scene,text="Clear scene")
+        clear_scene_button.grid(row=1,column=1,padx=10,pady=10)
 
         #save image button
         save_image_button = ttk.Button(main_container,command=lambda: save_image(self.canvas.image),text="Save image")
@@ -488,7 +517,7 @@ class App:
     
 if __name__ == "__main__":
     #resolution of the image
-    WIDTH = 600
+    WIDTH = 400
     HEIGHT = 400
     CAMERA_POSITION = np.array([0,0,-6])
     LIGHT_POSITION = np.array([10,10,-10])

@@ -140,7 +140,7 @@ class CSG_object_node:
         True if the node is a leaf (i.e., it contains a primitive), False otherwise.
         """
         #this funtion determines whether the node is a leaf becuase only the lease
-        return self.primitive is None
+        return self.primitive is not None
     
     def bounding_sphere_intersection(self,ray_origin,ray_direction):
         """

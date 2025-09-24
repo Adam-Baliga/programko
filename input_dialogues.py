@@ -318,14 +318,14 @@ def get_translation(objects:dict):
 
 class Dialog_rotation(simpledialog.Dialog):
     """
-    class for the dialog that asks for the rotation angle and plane and the object to rotate in one dialog
+    class for the dialog that asks for the rotation angle and axis and the object to rotate in one dialog
 
     Objects: list of object names
-    rotation plane: "xy","yz","xz"
+    rotation axis: "x","y","z"
     angle: in degrees
 
     Attributes:
-        result (tuple): None if the dialog was cancelled, otherwise a tuple (obj_name,angle,plane)
+        result (tuple): None if the dialog was cancelled, otherwise a tuple (obj_name,angle,axis)
     """
     def __init__(self, parent=None, title=None,objects=[]):
         self.objects = objects
@@ -343,11 +343,11 @@ class Dialog_rotation(simpledialog.Dialog):
 
         self.angle_entry = simple_field(master,1,"Angle (degrees): ")
 
-        ttk.Label(master, text="Rotation plane:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(master, text="Rotation axis:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
 
-        self.plane_cb = ttk.Combobox(master=master,values=["xy","yz","xz"])
-        self.plane_cb.set("Select plane")
-        self.plane_cb.grid(row=2,column=1,padx=10,pady=10)
+        self.axis_cb = ttk.Combobox(master=master,values=["x","y","z"])
+        self.axis_cb.set("Select axis")
+        self.axis_cb.grid(row=2,column=1,padx=10,pady=10)
 
 
     def validate(self):
@@ -370,16 +370,16 @@ class Dialog_rotation(simpledialog.Dialog):
             )
             return 0
 
-        plane = self.plane_cb.get()
-        if plane not in ["xy","yz","xz"]:
+        axis = self.axis_cb.get()
+        if axis not in ["x","y","z"]:
             messagebox.showwarning(
                     "Illegal value",
-                    f"Please select rotation plane",
+                    f"Please select rotation axis",
                     parent = self
                 )
             return 0
 
-        self.result = (obj1,angle,plane)
+        self.result = (obj1,angle,axis)
         return 1
     
 def get_rotation(objects):
@@ -419,11 +419,11 @@ class Dialog_only_rotation(simpledialog.Dialog):
 
         self.angle_entry = simple_field(master,0,"Angle (degrees): ")
 
-        ttk.Label(master, text="Rotation plane:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(master, text="Rotation axis:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
 
-        self.plane_cb = ttk.Combobox(master=master,values=["xy","yz","xz"])
-        self.plane_cb.set("Select plane")
-        self.plane_cb.grid(row=1,column=1,padx=10,pady=10)
+        self.axis_cb = ttk.Combobox(master=master,values=["x","y","z"])
+        self.axis_cb.set("Select axis")
+        self.axis_cb.grid(row=1,column=1,padx=10,pady=10)
 
 
     def validate(self):
@@ -438,16 +438,16 @@ class Dialog_only_rotation(simpledialog.Dialog):
             )
             return 0
 
-        plane = self.plane_cb.get()
-        if plane not in ["xy","yz","xz"]:
+        axis = self.axis_cb.get()
+        if axis not in ["x","y","z"]:
             messagebox.showwarning(
                     "Illegal value",
-                    f"Please select rotation plane",
+                    f"Please select rotation axis",
                     parent = self
                 )
             return 0
 
-        self.result = (angle,plane)
+        self.result = (angle,axis)
         return 1
     
 
@@ -495,7 +495,7 @@ def get_translation_vector():
     """
     Prompts the user to enter the translation vector. Returns a list [x,y,z] or None if cancelled.
     """
-    d = Dialog_xyz_coordinates(title="Translation vector")
+    d = Dialog_xyz_coordinates(title="New Camera Position")
     return d.result
 
 def get_light_id(light_sources:dict):
@@ -508,7 +508,7 @@ def get_light_id(light_sources:dict):
 
 def get_camera_rotation():
     """
-    Prompts the user to enter the angle and the plane that they want the camera to rotate. Returns a tuple (angle,plane) or None if cancelled.
+    Prompts the user to enter the angle and the axis that they want the camera to rotate. Returns a tuple (angle,axis) or None if cancelled.
     """
 
     d = Dialog_only_rotation(title="Camera rotation")
