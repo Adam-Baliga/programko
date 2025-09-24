@@ -29,7 +29,7 @@ The viewport is a simple Tkinter canvas where the 3D scene is rendered using ray
 ### Control panel
 The control panel is where the user can create the scene. It is divided into several sections and buttons:
 
-![Picture of the Control Panel.](/docs/control_panel.png)
+![Picture of the Control Panel.](/docs/control-panel.png)
 
 
 Sections:
@@ -80,6 +80,11 @@ Sections:
     - Save image  > opens a dialog to input the file name and saves the rendered scene as a png file
     - Clear scene > clears the scene of all objects and lights
     - Change resolution > opens a dialog to input the new resolution (width, height) of the viewport
+  
+> [!NOTE]
+> By default the app creates a white light source at [10,10,-10].
+> The default camera position is [0,0,-5] 
+> The camera looking direction is always preset to [0,0,1] (rn the preset cannot be changed) but the direction can be andjusted using camera rotation.
 
 ### Example workflow
 1. Create a box and a sphere using the "Add box" and "Add sphere" buttons in the "Create objects" section.
